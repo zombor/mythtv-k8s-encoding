@@ -11,7 +11,7 @@ readonly destinationPath=$8
 
 readonly cleanTitle=$(echo ${title// /.})
 readonly filename="${cleanTitle}/${cleanTitle}.S${season}E${episode}.mkv"
-readonly jobName="myth-ts-$(echo $cleanTitle | tr '[:upper:]' '[:lower:]').s${season}e${episode}"
+readonly jobName="myth-ts-$(echo $cleanTitle | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]._-').s${season}e${episode}"
 
 readonly sourceVolumeServer=${sourceMount%:*}
 readonly sourceVolumePath=${sourceMount#*:}
