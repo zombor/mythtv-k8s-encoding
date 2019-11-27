@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+readonly sourceDir=$1
+readonly sourceFile=$2
+readonly title=$3
+readonly season=$4
+readonly episode=$(printf "%02d" $5)
+readonly sourceMount=$6
+readonly destinationMount=$7
+readonly destinationPath=$8
+
+readonly cleanTitle=$(echo ${title// /.})
+readonly filename="${cleanTitle}/${cleanTitle}.S${season}E${episode}.mkv"
+readonly jobName="myth-ts-$(echo $cleanTitle | tr '[:upper:]' '[:lower:]').s${season}e${episode}"
+
+readonly sourceVolumeServer=${sourceMount%:*}
+readonly sourceVolumePath=${sourceMount#*:}
+readonly destinationVolumeServer=${destinationMount%:*}
+readonly destinationVolumePath=${destinationMount#*:}
+
+read -r -d '' jobYAML <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: ffmpeg
+  name: ${jobName}
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: ffmpeg
+        job-name: ${jobName}
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - ffmpeg
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - command:
+        - sh
+        - -c
+        - ffmpeg -y -i ${sourceDir}/${sourceFile} -acodec copy -b:v 5M -vcodec h264 -profile:v baseline ${destinationVolumePath}/${destinationPath}/${filename}
+        image: adilinden/rpi-ffmpeg
+        imagePullPolicy: IfNotPresent
+        name: ffmpeg
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: ${destinationVolumePath}
+          name: destination
+        - mountPath: ${sourceVolumePath}
+          name: source
+      restartPolicy: Never
+      volumes:
+      - name: destination
+        nfs:
+          path: ${destinationVolumePath}
+          server: ${destinationVolumeServer}
+      - name: source
+        nfs:
+          path: ${sourceVolumePath}
+          server: ${sourceVolumeServer}
+EOF
+
+echo "$jobYAML" | kubectl create -f - || exit 1
+
+kubectl wait --timeout=-1s --for=condition=complete job/${jobName} || exit 1
+
+kubectl delete job/${jobName}
