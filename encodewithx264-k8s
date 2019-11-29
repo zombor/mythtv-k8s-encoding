@@ -18,6 +18,8 @@ readonly sourceVolumePath=${sourceMount#*:}
 readonly destinationVolumeServer=${destinationMount%:*}
 readonly destinationVolumePath=${destinationMount#*:}
 
+readonly fullDestinationPath="${destinationVolumePath}/${destinationPath}/${cleanTitle}"
+
 read -r -d '' jobYAML <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -48,7 +50,7 @@ spec:
       - command:
         - sh
         - -c
-        - ffmpeg -y -i ${sourceDir}/${sourceFile} -acodec copy -b:v 5M -vcodec h264 -profile:v baseline ${destinationVolumePath}/${destinationPath}/${filename}
+        - mkdir -p ${fullDestinationPath} && ffmpeg -y -i ${sourceDir}/${sourceFile} -acodec copy -b:v 5M -vcodec h264 -profile:v baseline ${fullDestinationPath}/${filename}
         image: adilinden/rpi-ffmpeg
         imagePullPolicy: IfNotPresent
         name: ffmpeg
