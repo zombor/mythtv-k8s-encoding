@@ -7,9 +7,9 @@ readonly season=$4
 readonly episode=$(printf "%02d" $5)
 readonly sourceMount=$6
 readonly destinationMount=$7
-readonly destinationPath=$8
+readonly destinationPath=$(echo $8 | tr -cd '[:alnum:]._-')
 
-readonly cleanTitle=$(echo ${title// /.})
+readonly cleanTitle=$(echo ${title// /.} | tr -cd '[:alnum:]._-')
 readonly filename="${cleanTitle}/${cleanTitle}.S${season}E${episode}.mkv"
 readonly jobName="myth-ts-$(echo $cleanTitle | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]._-').s${season}e${episode}"
 
